@@ -26,6 +26,13 @@ export function activate(context, vscode, { invoke = runPatina } = {}) {
   };
   const workingDirectory = (document) => vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath || (document.uri.scheme === 'file' ? dirname(document.uri.fsPath) : tmpdir());
   const trusted = () => { if (!vscode.workspace.isTrusted) throw new Error('Trust this workspace before running a local CLI.'); };
+  function setDiagnostics(document, result) {
+    const rows = result.diagnostics.filter((row) => !(row.scope === 'paragraph' && row.localized));
+    diagnostics.set(document.uri, rows.map((row) => {
+      const item = new vscode.Diagnostic(new vscode.Range(document.positionAt(row.start), document.positionAt(row.end)), row.message, vscode.DiagnosticSeverity.Warning);
+      item.source = 'Patina'; item.code = row.code; return item;
+    }));
+  }
   async function inspect(document, explicit = false) {
     if (disposed || !document || document.isClosed || !['file', 'untitled'].includes(document.uri.scheme)) return null;
     trusted(); const key = document.uri.toString(); const text = document.getText(); const version = document.version;
@@ -38,10 +45,7 @@ export function activate(context, vscode, { invoke = runPatina } = {}) {
       const result = validateInspection(await invoke({ cliPath: config.cliPath, args: ['inspect', '--lang', config.language], text,
         cwd: workingDirectory(document), signal: controller.signal, timeoutMs: 15000 }), text);
       if (disposed || controller.signal.aborted || document.isClosed || document.version !== version) return null;
-      diagnostics.set(document.uri, result.diagnostics.map((row) => {
-        const item = new vscode.Diagnostic(new vscode.Range(document.positionAt(row.start), document.positionAt(row.end)), row.message, vscode.DiagnosticSeverity.Warning);
-        item.source = 'Patina'; item.code = row.code; return item;
-      }));
+      setDiagnostics(document, result);
       if (current()) {
         status.text = result.available ? `Patina ${Math.round(result.score)}` : 'Patina —';
         status.tooltip = result.available ? 'Local AI-writing signals; not an authorship verdict.' : 'Deterministic analysis is unavailable or disabled.';
@@ -80,16 +84,20 @@ export function activate(context, vscode, { invoke = runPatina } = {}) {
     }
     const args = [mode === 'audit' ? '--audit' : '--verify', '--format', 'json', '--quiet', '--no-interactive', '--lang', language];
     if (config.backend !== 'auto') args.push('--backend', config.backend);
+    let actionCancelled = false;
     const result = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: mode === 'audit' ? 'Patina: auditing' : 'Patina: rewriting', cancellable: true }, async (_progress, token) => {
       const controller = new AbortController(); const listener = token.onCancellationRequested(() => controller.abort());
       actionControllers.add(controller);
       if (token.isCancellationRequested) controller.abort();
       try { return await invoke({ cliPath: config.cliPath, args, text, cwd: workingDirectory(document), signal: controller.signal }); }
-      finally { listener.dispose(); actionControllers.delete(controller); }
+      finally { actionCancelled = controller.signal.aborted; listener.dispose(); actionControllers.delete(controller); }
     });
-    if (disposed) return;
+    if (disposed || actionCancelled) return;
     if (typeof result.output !== 'string' || !result.output.trim()) throw new Error('Patina returned no text.');
     if (mode === 'audit') {
+      if (result.inspection && !document.isClosed && document.version === version && document.getText() === original) {
+        setDiagnostics(document, validateInspection(result.inspection, original));
+      }
       const report = await vscode.workspace.openTextDocument({ language: 'markdown', content: result.output });
       if (!disposed) await vscode.window.showTextDocument(report, { preview: true });
       return;

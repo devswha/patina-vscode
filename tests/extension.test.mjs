@@ -125,3 +125,16 @@ test('disposal during editor operations prevents later confirmation, report disp
   audit.vscode.window.showTextDocument = async () => { displayed = true; };
   await audit.commands.get('patina.audit')(); assert.equal(displayed, false);
 });
+
+test('audit uses source-bound sentence ranges while stale responses cannot move diagnostics', async () => {
+  const text = 'A calm sentence. Formulaic wording.';
+  const inspection = { schemaVersion: 1, deterministicOnly: true, sourceHash: checksum(text), language: 'en', available: true, score: 100,
+    diagnostics: [{ start: 0, end: text.length, scope: 'paragraph', localized: true, message: 'Paragraph', code: 'ai-like-paragraph' },
+      { start: 17, end: text.length, scope: 'sentence', message: 'Sentence', code: 'ai-like-sentence' }] };
+  const h = host({ initialText: text, invoke: async () => ({ output: 'Audit report.', inspection }) });
+  await h.commands.get('patina.audit')();
+  const rows = h.items.get(h.document.uri.toString()); assert.equal(rows.length, 1); assert.equal(rows[0].range.start, 17); h.dispose();
+  let stale;
+  stale = host({ initialText: text, invoke: async () => { stale.mutate('User changed it.'); return { output: 'Audit report.', inspection }; } });
+  await stale.commands.get('patina.audit')(); assert.equal(stale.items.size, 0); stale.dispose();
+});
