@@ -1,0 +1,22 @@
+const assert = require('node:assert/strict');
+const vscode = require('vscode');
+const fs = require('node:fs');
+exports.run = async function () {
+  const config = vscode.workspace.getConfiguration('patina');
+  await config.update('autoScore', false, vscode.ConfigurationTarget.Global);
+  await config.update('language', 'en', vscode.ConfigurationTarget.Global);
+  await config.update('cliPath', process.env.PATINA_TEST_CLI, vscode.ConfigurationTarget.Global);
+  const extension = vscode.extensions.getExtension('devswha.patina-vscode');
+  assert.ok(extension, 'development extension registered');
+  const api = await extension.activate();
+  const doc = await vscode.workspace.openTextDocument({ language: 'markdown', content: "In today's rapidly evolving landscape, this comprehensive solution unlocks unprecedented opportunities. Furthermore, it fosters seamless collaboration and takes productivity to the next level." });
+  await vscode.window.showTextDocument(doc);
+  const result = await vscode.commands.executeCommand('patina.score');
+  assert.equal(result.schemaVersion, 1); assert.equal(result.deterministicOnly, true);
+  assert.ok(api.diagnostics.get(doc.uri).length > 0);
+  assert.match(api.status.text, /Patina \d+/);
+  const commands = await vscode.commands.getCommands(true);
+  for (const command of ['patina.score', 'patina.audit', 'patina.humanizeSelection']) assert.ok(commands.includes(command));
+  console.log('Patina extension-host inspection passed');
+  fs.writeFileSync(process.env.PATINA_HOST_RECEIPT, JSON.stringify({ status: 'passed', vscode: vscode.version, score: result.score, diagnostics: api.diagnostics.get(doc.uri).length }));
+};

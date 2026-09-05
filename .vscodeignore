@@ -1,0 +1,7 @@
+.git/**
+.github/**
+tests/**
+scripts/**
+artifacts/**
+.vscode-test/**
+*.vsix
