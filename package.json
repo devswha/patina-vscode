@@ -6,29 +6,96 @@
   "publisher": "devswha",
   "license": "MIT",
   "type": "module",
-  "engines": { "vscode": "^1.85.0" },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
   "main": "./extension.cjs",
-  "categories": ["Other"],
-  "activationEvents": ["onStartupFinished"],
-  "capabilities": { "untrustedWorkspaces": { "supported": false }, "virtualWorkspaces": false },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": false
+  },
   "contributes": {
     "commands": [
-      { "command": "patina.score", "title": "Patina: Score Current Document" },
-      { "command": "patina.installCli", "title": "Patina: Install or Update CLI" },
-      { "command": "patina.audit", "title": "Patina: Audit Current Document" },
-      { "command": "patina.humanizeSelection", "title": "Patina: Humanize Selection" }
+      {
+        "command": "patina.score",
+        "title": "Patina: Score Current Document"
+      },
+      {
+        "command": "patina.installCli",
+        "title": "Patina: Install or Update CLI"
+      },
+      {
+        "command": "patina.audit",
+        "title": "Patina: Audit Current Document"
+      },
+      {
+        "command": "patina.humanizeSelection",
+        "title": "Patina: Humanize Selection"
+      }
     ],
     "configuration": {
       "title": "Patina",
       "properties": {
-        "patina.cliPath": { "type": "string", "default": "npx patina-cli", "description": "Patina executable or JavaScript entry path. Default uses npm's cached CLI." },
-        "patina.language": { "type": "string", "enum": ["auto", "en", "ko", "zh", "ja"], "default": "auto", "description": "Language for inspection and rewriting." },
-        "patina.backend": { "type": "string", "enum": ["auto", "codex-cli", "claude-cli", "gemini-cli", "kimi-cli", "openai-http"], "default": "auto", "description": "Existing Patina backend for explicitly requested audits and rewrites." },
-        "patina.scoreThreshold": { "type": "number", "minimum": 0, "maximum": 100, "default": 30, "description": "Highlight the status score above this value." },
-        "patina.autoScore": { "type": "boolean", "default": true, "description": "Inspect edited documents locally after a short pause." }
+        "patina.cliPath": {
+          "type": "string",
+          "default": "npx patina-cli",
+          "description": "Patina executable or JavaScript entry path. Default uses npm's cached CLI."
+        },
+        "patina.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "ko",
+            "zh",
+            "ja"
+          ],
+          "default": "auto",
+          "description": "Language for inspection and rewriting."
+        },
+        "patina.backend": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "codex-cli",
+            "claude-cli",
+            "gemini-cli",
+            "kimi-cli",
+            "openai-http"
+          ],
+          "default": "auto",
+          "description": "Existing Patina backend for explicitly requested audits and rewrites."
+        },
+        "patina.scoreThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 30,
+          "description": "Highlight the status score above this value."
+        },
+        "patina.autoScore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Inspect edited documents locally after a short pause."
+        }
       }
     }
   },
-  "scripts": { "test": "node --test tests/*.test.mjs", "test:host": "bash scripts/test-host.sh" },
-  "repository": { "type": "git", "url": "https://github.com/devswha/patina-vscode.git" }
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:host": "bash scripts/test-host.sh",
+    "lint": "node --check extension.cjs && node --check src/cli.js && node --check src/extension.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devswha/patina-vscode.git"
+  }
 }
